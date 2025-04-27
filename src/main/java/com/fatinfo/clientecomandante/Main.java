@@ -2,6 +2,7 @@ package com.fatinfo.clientecomandante;
 
 import java.util.UUID;
 import com.hivemq.client.mqtt.MqttClient;
+import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 
 public class Main {
@@ -17,6 +18,12 @@ public class Main {
         .buildAsync();
 
         client.connectWith()
+        .willPublish()
+            .topic("esp32")
+            .payload("Servidor comandante desconectado!".getBytes())
+            .qos(MqttQos.AT_LEAST_ONCE)
+            .retain(false)
+            .applyWillPublish()
         .simpleAuth()
             .username("admin")
             .password("Fat123456".getBytes())
