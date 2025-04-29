@@ -1,13 +1,15 @@
 package com.fatinfo.clientecomandante;
 
+import java.io.IOException;
 import java.util.UUID;
 import com.hivemq.client.mqtt.MqttClient;
-import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
+import com.fatinfo.clientecomandante.logGerenciador;
 
 public class Main {
     public static void main(String[] args) {
         System.out.println("Iniciando cliente MQTT...");
+        logGerenciador log = new logGerenciador();
 
         Mqtt3AsyncClient client = MqttClient.builder()
         .useMqttVersion3()
@@ -18,12 +20,8 @@ public class Main {
         .buildAsync();
 
         client.connectWith()
-        .willPublish()
-            .topic("esp32")
-            .payload("Servidor comandante desconectado!".getBytes())
-            .qos(MqttQos.AT_LEAST_ONCE)
-            .retain(false)
-            .applyWillPublish()
+        .keepAlive(1)
+        .cleanSession(true)
         .simpleAuth()
             .username("admin")
             .password("Fat123456".getBytes())
@@ -50,7 +48,7 @@ public class Main {
         });
 
         client.subscribeWith()
-            .topicFilter("esp32")
+            .topicFilter("devices/esp32")
             .callback(msg -> System.out.println("Mensagem recebida: " + new String(msg.getPayloadAsBytes())))
             .send()
         .whenComplete((v, e) -> {
@@ -60,5 +58,27 @@ public class Main {
                 System.out.println("Se inscreveu no tópico com sucesso!");
             }
         });
+
+        client.subscribeWith()
+        .topicFilter("logs/esp32")
+        .callback(msg -> 
+            {
+                try {
+                    System.out.println("Notificação recebida: " + new String(msg.getPayloadAsBytes()));
+                    log.gerarLog(new String(msg.getPayloadAsBytes()));
+                } catch (IOException e1) {
+                    // TODO Auto-generated catch block
+                    e1.printStackTrace();
+                }
+            }
+        )
+        .send()
+            .whenComplete((v, e) -> {
+                if (e != null) {
+                    System.out.println("Erro ao se inscrever no tópico: " + e.getMessage());
+                } else {
+                    System.out.println("Se inscreveu no tópico com sucesso!");
+                }
+            });
     }
 }
